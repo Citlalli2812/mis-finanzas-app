@@ -1,0 +1,17 @@
+{
+    "citlalli": {
+        "password": "1234cit",
+        "datos": {
+            "ingresos": [],
+            "gastos": []
+        }
+    },
+    "cortezcitlalli@yahoo.com": {
+        "password": "2026citlalli@",
+        "datos": {
+            "ingresos": [],
+            "gastos": [],
+            "tickets": []
+        }
+    }
+}
