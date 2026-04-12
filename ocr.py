@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import pytesseract
 from PIL import Image
 import re
@@ -62,7 +61,6 @@ def obtener_total(ruta_imagen):
         if match:
             return float(match.group(1).replace(",", ""))
 
-=======
 import pytesseract
 from PIL import Image
 import re
