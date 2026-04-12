@@ -1,3 +1,8 @@
+<<<<<<< HEAD
 streamlit
 matplotlib
+=======
+streamlit
+matplotlib
+>>>>>>> 03fb0aaa169182ac69c2d7928102cd1e5c64e4fb
 Pillow
