@@ -46,14 +46,55 @@ def asegurar_datos(usuario, usuarios):
 
     return datos
 
+def reducir_imagen(imagen):
+    from PIL import Image
+    import io
+
+    img = Image.open(imagen)
+
+    # 🔧 Convertir a RGB (por si es PNG raro)
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+
+    # 🔧 Redimensionar si es muy grande
+    max_size = (1024, 1024)
+    img.thumbnail(max_size)
+
+    # 🔧 Guardar comprimida
+    buffer = io.BytesIO()
+    img.save(buffer, format="JPEG", quality=70)
+    buffer.seek(0)
+
+    return buffer
+
 def leer_ticket(imagen):
-    url = "https://api.ocr.space/parse/image"
-    payload = {'apikey': 'helloworld','language': 'spa'}
-    files = {'file': imagen}
-    response = requests.post(url, files=files, data=payload)
-    return response.json()['ParsedResults'][0]['ParsedText']
+    import requests
+
+    try:
+        response = requests.post(
+            'https://api.ocr.space/parse/image',
+            files={'file': imagen},
+            data={'apikey': 'TU_API_KEY', 'language': 'spa'}
+        )
+
+        result = response.json()
+
+        print(result)  # 👀 para ver errores en logs
+
+        if 'ParsedResults' in result and result['ParsedResults']:
+            return result['ParsedResults'][0]['ParsedText']
+        else:
+            return ""
+
+    except Exception as e:
+        print("Error OCR:", e)
+        return ""
+
 
 def extraer_datos(texto):
+    if not texto:
+        return "Desconocido", str(datetime.date.today()), 0
+
     lineas = texto.split("\n")
     total = 0
     negocio = "Desconocido"
@@ -63,9 +104,12 @@ def extraer_datos(texto):
         if "total" in linea.lower():
             numeros = re.findall(r"\d+\.\d+|\d+", linea)
             if numeros:
-                total = float(numeros[-1])
+                try:
+                    total = float(numeros[-1])
+                except:
+                    total = 0
 
-    if len(lineas) > 0:
+    if len(lineas) > 0 and lineas[0].strip() != "":
         negocio = lineas[0]
 
     return negocio, fecha, total
@@ -330,9 +374,22 @@ if menu == "📸 Tickets":
     fecha_manual = st.date_input("Fecha", value=datetime.date.today())
     imagen = st.file_uploader("Sube ticket", type=["jpg","png"])
 
+    # 🔧 Validar tamaño de imagen
+    if imagen is not None:
+        if imagen.size > 2 * 1024 * 1024:
+            st.warning("⚠️ La imagen es muy pesada (máx 2MB)")
+
     if imagen and st.button("Leer ticket"):
-        texto = leer_ticket(imagen)
-        negocio,_,total = extraer_datos(texto)
+
+    # 🔥 Reducir imagen antes de enviarla
+    imagen_reducida = reducir_imagen(imagen)
+
+    texto = leer_ticket(imagen_reducida)
+
+    if texto == "":
+        st.error("❌ No se pudo leer el ticket (imagen inválida o error OCR)")
+    else:
+        negocio, _, total = extraer_datos(texto)
 
         st.session_state.ticket = {
             "negocio": negocio,
@@ -349,7 +406,6 @@ if menu == "📸 Tickets":
         total = st.number_input("Total", value=float(t["total"]))
 
         tipo = st.radio("Tipo", ["Gasto","Ingreso"])
-
         categoria = st.selectbox("Categoría", ["Comida","Ropa","Medicamentos"])
 
         if st.button("Guardar Ticket"):
