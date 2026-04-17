@@ -79,24 +79,36 @@ def leer_ticket(imagen):
 
     try:
         response = requests.post(
-            'https://api.ocr.space/parse/image',
-            files={'file': imagen},
+            "https://api.ocr.space/parse/image",
+            files={
+                "file": ("ticket.jpg", imagen, "image/jpeg")
+            },
             data={
-                'apikey': st.secrets["OCR_API_KEY"],
-                'language': 'spa'
-            }
+                "apikey": st.secrets["OCR_API_KEY"],
+                "language": "spa",
+                "isOverlayRequired": False,
+                "OCREngine": 2,
+                "scale": True
+            },
+            timeout=40
         )
 
         result = response.json()
 
-        if 'ParsedResults' in result and result['ParsedResults']:
-            return result['ParsedResults'][0]['ParsedText']
-        else:
+        # VER RESPUESTA EN APP
+        st.write("Respuesta OCR:", result)
+
+        if result.get("IsErroredOnProcessing") == True:
             return ""
 
-    except Exception as e:
+        if "ParsedResults" in result and len(result["ParsedResults"]) > 0:
+            return result["ParsedResults"][0].get("ParsedText", "")
+
         return ""
 
+    except Exception as e:
+        st.error(f"Error OCR: {e}")
+        return ""
 
 def extraer_datos(texto):
     if not texto:
