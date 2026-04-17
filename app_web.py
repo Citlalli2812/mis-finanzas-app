@@ -8,11 +8,18 @@ import re
 
 USUARIOS_ARCHIVO = "usuarios.json"
 
+
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="Mis Finanzas", page_icon="💰", layout="wide")
 
 if "usuario_actual" not in st.session_state:
     st.session_state.usuario_actual = None
+
+if "cat" not in st.session_state:
+    st.session_state.cat = None
+
+if "ticket" not in st.session_state:
+    st.session_state.ticket = None
 
 # ---------------- FUNCIONES ----------------
 def cargar_usuarios():
@@ -369,68 +376,100 @@ if menu == "📋 Movimientos":
         st.pyplot(fig)
 
 # ---------------- TICKETS ----------------
+
 if menu == "📸 Tickets":
 
+    st.subheader("📸 Escanear Ticket")
+
     fecha_manual = st.date_input("Fecha", value=datetime.date.today())
-    imagen = st.file_uploader("Sube ticket", type=["jpg","png"])
+    imagen = st.file_uploader("Sube ticket", type=["jpg", "png", "jpeg"])
 
-    # 🔧 Validar tamaño de imagen
     if imagen is not None:
-        if imagen.size > 2 * 1024 * 1024:
-            st.warning("⚠️ La imagen es muy pesada (máx 2MB)")
+        if imagen.size > 5 * 1024 * 1024:
+            st.warning("⚠️ Imagen pesada, la optimizaré automáticamente")
 
-    if imagen and st.button("Leer ticket"):
+    if imagen is not None and st.button("Leer ticket"):
 
-    # 🔥 Reducir imagen antes de enviarla
-    imagen_reducida = reducir_imagen(imagen)
+        with st.spinner("Leyendo ticket..."):
 
-    texto = leer_ticket(imagen_reducida)
+            imagen_reducida = reducir_imagen(imagen)
+            texto = leer_ticket(imagen_reducida)
 
-    if texto == "":
-        st.error("❌ No se pudo leer el ticket (imagen inválida o error OCR)")
-    else:
-        negocio, _, total = extraer_datos(texto)
+            if texto == "":
+                st.error("❌ No se pudo leer ticket")
 
-        st.session_state.ticket = {
-            "negocio": negocio,
-            "fecha": fecha_manual.strftime("%Y-%m-%d"),
-            "total": total
-        }
+            else:
+                negocio, _, total = extraer_datos(texto)
 
-    if "ticket" in st.session_state:
+                st.success("✅ Ticket leído")
+
+                st.session_state.ticket = {
+                    "negocio": negocio,
+                    "fecha": fecha_manual.strftime("%Y-%m-%d"),
+                    "total": total
+                }
+
+    if "ticket" in st.session_state and st.session_state.ticket is not None:
 
         t = st.session_state.ticket
 
-        negocio = st.text_input("Negocio", t["negocio"])
-        fecha = st.text_input("Fecha", t["fecha"])
-        total = st.number_input("Total", value=float(t["total"]))
+        st.divider()
+        st.subheader("📝 Confirmar datos")
 
-        tipo = st.radio("Tipo", ["Gasto","Ingreso"])
-        categoria = st.selectbox("Categoría", ["Comida","Ropa","Medicamentos"])
+        negocio = st.text_input("Negocio", value=t["negocio"])
+        fecha = st.text_input("Fecha", value=t["fecha"])
 
-        if st.button("Guardar Ticket"):
+        total = st.number_input(
+            "Total",
+            min_value=0.0,
+            value=float(t["total"])
+        )
 
-            datos["tickets"].append({
-                "negocio": negocio,
-                "fecha": fecha,
-                "total": total,
-                "tipo": tipo,
-                "categoria": categoria
-            })
+        tipo = st.radio("Tipo", ["Gasto", "Ingreso"])
 
-            guardar_usuarios(usuarios)
-            del st.session_state.ticket
+        categoria = st.selectbox(
+            "Categoría",
+            ["Comida", "Ropa", "Medicamentos"]
+        )
 
-            st.success("Ticket guardado")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("Guardar Ticket"):
+
+                datos["tickets"].append({
+                    "negocio": negocio,
+                    "fecha": fecha,
+                    "total": total,
+                    "tipo": tipo,
+                    "categoria": categoria
+                })
+
+                guardar_usuarios(usuarios)
+
+                st.session_state.ticket = None
+
+                st.success("✅ Ticket guardado")
+                st.rerun()
+
+        with col2:
+            if st.button("Cancelar"):
+                st.session_state.ticket = None
+                st.rerun()
+
 
 # ---------------- VER TICKETS ----------------
+
 if menu == "🧾 Ver tickets":
 
     st.subheader("🧾 Tickets guardados")
 
+    if len(datos["tickets"]) == 0:
+        st.info("No tienes tickets guardados")
+
     for i, t in enumerate(datos["tickets"]):
 
-        col1, col2 = st.columns([4,1])
+        col1, col2 = st.columns([4, 1])
 
         with col1:
             st.write(f"🏪 {t['negocio']}")
@@ -440,6 +479,7 @@ if menu == "🧾 Ver tickets":
 
         with col2:
             if st.button("❌", key=f"del_ticket_{i}"):
+
                 datos["tickets"].pop(i)
                 guardar_usuarios(usuarios)
                 st.rerun()
