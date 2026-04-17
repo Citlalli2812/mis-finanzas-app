@@ -81,12 +81,13 @@ def leer_ticket(imagen):
         response = requests.post(
             'https://api.ocr.space/parse/image',
             files={'file': imagen},
-            data={'apikey': 'TU_API_KEY', 'language': 'spa'}
+            data={
+                'apikey': 'K82874382488957',
+                'language': 'spa'
+            }
         )
 
         result = response.json()
-
-        print(result)  # 👀 para ver errores en logs
 
         if 'ParsedResults' in result and result['ParsedResults']:
             return result['ParsedResults'][0]['ParsedText']
@@ -94,7 +95,6 @@ def leer_ticket(imagen):
             return ""
 
     except Exception as e:
-        print("Error OCR:", e)
         return ""
 
 
