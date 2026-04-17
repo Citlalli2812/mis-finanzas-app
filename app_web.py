@@ -82,7 +82,7 @@ def leer_ticket(imagen):
             'https://api.ocr.space/parse/image',
             files={'file': imagen},
             data={
-                'apikey': 'K82874382488957',
+                'apikey': st.secrets["OCR_API_KEY"],
                 'language': 'spa'
             }
         )
