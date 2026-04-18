@@ -526,25 +526,57 @@ if menu == "📸 Tickets":
 
         col1, col2 = st.columns(2)
 
-        with col1:
-            if st.button("Guardar Ticket"):
+    with col1:
+     if st.button("Guardar Ticket"):
 
-                datos["tickets"].append({
-                    "negocio": negocio,
-                    "fecha": fecha,
-                    "total": total,
-                    "tipo": tipo,
-                    "categoria": categoria
-                })
+        nuevo_ticket = {
+            "negocio": negocio,
+            "fecha": fecha,
+            "total": total,
+            "tipo": tipo,
+            "categoria": categoria
+        }
 
-                guardar_usuarios(usuarios)
+        datos["tickets"].append(nuevo_ticket)
 
-                st.session_state.ticket = None
+        # también guardar en resumen
+        if tipo == "Gasto":
 
-                st.success("✅ Ticket guardado")
-                st.rerun()
+            colores = {
+                "Comida": "#FF6B6B",
+                "Ropa": "#4D96FF",
+                "Medicamentos": "#FFD93D"
+            }
 
-        with col2:
+            datos["gastos"].append({
+                "categoria": categoria,
+                "monto": total,
+                "fecha": fecha,
+                "color": colores.get(categoria, "#999999")
+            })
+
+        else:
+            datos["ingresos"].append({
+                "descripcion": negocio,
+                "monto": total,
+                "fecha": fecha
+            })
+
+        guardar_usuarios(usuarios)
+
+        st.session_state.ticket = None
+
+        st.success("✅ Ticket guardado")
+        st.rerun()
+
+        guardar_usuarios(usuarios)
+
+    st.session_state.ticket = None
+
+    st.success("✅ Ticket guardado")
+    st.rerun()
+
+    with col2:
             if st.button("Cancelar"):
                 st.session_state.ticket = None
                 st.rerun()
