@@ -449,7 +449,6 @@ if menu == "📋 Movimientos":
         st.pyplot(fig)
 
 # ---------------- TICKETS ----------------
-
 if menu == "📸 Tickets":
 
     st.subheader("📸 Escanear Ticket")
@@ -490,16 +489,17 @@ if menu == "📸 Tickets":
                     fecha_final = fecha_ocr
                 else:
                     fecha_final = fecha_manual.strftime("%Y-%m-%d")
-                # --------------------------------------
 
-                st.success("✅ Ticket leído")
-
+                # guardar temporalmente
                 st.session_state.ticket = {
                     "negocio": negocio,
                     "fecha": fecha_final,
                     "total": total
                 }
 
+                st.success("✅ Ticket leído")
+
+    # ---------------- CONFIRMAR DATOS ----------------
     if "ticket" in st.session_state and st.session_state.ticket is not None:
 
         t = st.session_state.ticket
@@ -526,61 +526,54 @@ if menu == "📸 Tickets":
 
         col1, col2 = st.columns(2)
 
-    with col1:
-     if st.button("Guardar Ticket"):
+        # ---------------- GUARDAR ----------------
+        with col1:
+            if st.button("Guardar Ticket"):
 
-        nuevo_ticket = {
-            "negocio": negocio,
-            "fecha": fecha,
-            "total": total,
-            "tipo": tipo,
-            "categoria": categoria
-        }
+                nuevo_ticket = {
+                    "negocio": negocio,
+                    "fecha": fecha,
+                    "total": total,
+                    "tipo": tipo,
+                    "categoria": categoria
+                }
 
-        datos["tickets"].append(nuevo_ticket)
+                datos["tickets"].append(nuevo_ticket)
 
-        # también guardar en resumen
-        if tipo == "Gasto":
+                # guardar en resumen
+                if tipo == "Gasto":
 
-            colores = {
-                "Comida": "#FF6B6B",
-                "Ropa": "#4D96FF",
-                "Medicamentos": "#FFD93D"
-            }
+                    colores = {
+                        "Comida": "#FF6B6B",
+                        "Ropa": "#4D96FF",
+                        "Medicamentos": "#FFD93D"
+                    }
 
-            datos["gastos"].append({
-                "categoria": categoria,
-                "monto": total,
-                "fecha": fecha,
-                "color": colores.get(categoria, "#999999")
-            })
+                    datos["gastos"].append({
+                        "categoria": categoria,
+                        "monto": total,
+                        "fecha": fecha,
+                        "color": colores.get(categoria, "#999999")
+                    })
 
-        else:
-            datos["ingresos"].append({
-                "descripcion": negocio,
-                "monto": total,
-                "fecha": fecha
-            })
+                else:
+                    datos["ingresos"].append({
+                        "descripcion": negocio,
+                        "monto": total,
+                        "fecha": fecha
+                    })
 
-        guardar_usuarios(usuarios)
+                guardar_usuarios(usuarios)
 
-        st.session_state.ticket = None
+                st.session_state.ticket = None
+                st.success("✅ Ticket guardado")
+                st.rerun()
 
-        st.success("✅ Ticket guardado")
-        st.rerun()
-
-        guardar_usuarios(usuarios)
-
-    st.session_state.ticket = None
-
-    st.success("✅ Ticket guardado")
-    st.rerun()
-
-    with col2:
+        # ---------------- CANCELAR ----------------
+        with col2:
             if st.button("Cancelar"):
                 st.session_state.ticket = None
                 st.rerun()
-
 
 # ---------------- VER TICKETS ----------------
 
