@@ -96,7 +96,7 @@ def leer_ticket(imagen):
         result = response.json()
 
         # VER RESPUESTA EN APP
-        st.write("Respuesta OCR:", result)
+        # st.write("Respuesta OCR:", result)
 
         if result.get("IsErroredOnProcessing") == True:
             return ""
@@ -127,78 +127,43 @@ def extraer_datos(texto):
     negocio = "Desconocido"
     fecha = str(datetime.date.today())
 
-    # NEGOCIO AUTOMÁTICO (México)
-    # ==================================================
-
+    # NEGOCIO
     if "OXXO" in texto:
         negocio = "OXXO"
-
     elif "WALMART" in texto:
         negocio = "Walmart"
-
     elif "SORIANA" in texto:
         negocio = "Soriana"
-
     elif "FARMACIAS GUADALAJARA" in texto or "GUADALAJARA" in texto:
         negocio = "Farmacias Guadalajara"
-
     elif "COSTCO" in texto:
         negocio = "Costco"
-
     elif "AMAZON" in texto:
         negocio = "Amazon"
-
     elif "MERCADO PAGO" in texto:
         negocio = "Mercado Pago"
-
     elif "SPEI" in texto:
         negocio = "Transferencia SPEI"
-
     elif "SAMS" in texto or "SAM'S" in texto or "SAMS CLUB" in texto:
         negocio = "Sam's Club"
-
     elif len(lineas_limpias) > 0:
         negocio = lineas_limpias[0]
 
     # FECHA
-    # ==================================================
-
     fecha_match = re.search(r"(\d{2})/(\d{2})/(\d{4})", texto_original)
 
     if fecha_match:
-        dia = fecha_match.group(1)
-        mes = fecha_match.group(2)
-        anio = fecha_match.group(3)
+        dia, mes, anio = fecha_match.groups()
         fecha = f"{anio}-{mes}-{dia}"
 
-    else:
-        fecha_match2 = re.search(r"(\d{2})-(\d{2})-(\d{4})", texto_original)
-
-        if fecha_match2:
-            dia = fecha_match2.group(1)
-            mes = fecha_match2.group(2)
-            anio = fecha_match2.group(3)
-            fecha = f"{anio}-{mes}-{dia}"
-
-    # TOTAL INTELIGENTE
-    # ==================================================
-
+    # TOTAL
     palabras_total = [
-        "TOTAL",
-        "VALOR PAG",
-        "IMPORTE",
-        "PAGADO",
-        "MONTO",
-        "TOTAL A PAGAR",
-        "TOTAL MXN",
-        "PAGO"
+        "TOTAL", "VALOR PAG", "IMPORTE",
+        "PAGADO", "MONTO", "PAGO"
     ]
 
     for linea in lineas_limpias:
-
-        linea_upper = linea.upper()
-
-        if any(p in linea_upper for p in palabras_total):
+        if any(p in linea.upper() for p in palabras_total):
 
             numeros = re.findall(
                 r"\d{1,3}(?:,\d{3})*\.\d{2}|\d+\.\d{2}",
@@ -208,17 +173,13 @@ def extraer_datos(texto):
             for n in numeros:
                 try:
                     valor = float(n.replace(",", ""))
-
-                    if valor > total and valor > 1:
+                    if valor > total:
                         total = valor
                 except:
                     pass
 
-    # RESPALDO SI NO ENCONTRÓ TOTAL
-    # ==================================================
-
+    # RESPALDO
     if total == 0:
-
         numeros = re.findall(
             r"\d{1,3}(?:,\d{3})*\.\d{2}|\d+\.\d{2}",
             texto_original
@@ -227,59 +188,10 @@ def extraer_datos(texto):
         for n in numeros:
             try:
                 valor = float(n.replace(",", ""))
-
-                if valor > total and valor > 1:
+                if valor > total:
                     total = valor
             except:
                 pass
-
-    return negocio, fecha, total
-
-    # ---------------- NEGOCIO ----------------
-    if len(lineas) > 0:
-        negocio = lineas[0]
-
-    # ---------------- FECHA ----------------
-    fecha_match = re.search(r"(\d{2})/(\d{2})/(\d{4})", texto)
-
-    if fecha_match:
-        dia = fecha_match.group(1)
-        mes = fecha_match.group(2)
-        anio = fecha_match.group(3)
-        fecha = f"{anio}-{mes}-{dia}"
-
-    # ---------------- TOTAL PRIORIDAD 1 ----------------
-    match_valor = re.search(
-        r"VALOR\s*PAG\.?\s*\$?\s*([\d,]+\.\d{2})",
-        texto,
-        re.IGNORECASE
-    )
-
-    if match_valor:
-        total = float(match_valor.group(1).replace(",", ""))
-
-    else:
-
-        # ---------------- TOTAL PRIORIDAD 2 ----------------
-        for linea in lineas:
-            if any(p in linea.lower() for p in [
-                "total", "importe", "monto", "pagado"
-            ]):
-
-                numeros = re.findall(
-                    r"\d{1,3}(?:,\d{3})*\.\d{2}|\d+\.\d{2}",
-                    linea
-                )
-
-                for n in numeros:
-                    try:
-                        valor = float(n.replace(",", ""))
-
-                        # ignorar montos basura
-                        if valor > total and valor > 1:
-                            total = valor
-                    except:
-                        pass
 
     return negocio, fecha, total
 # ---------------- DATOS ----------------
