@@ -111,28 +111,66 @@ def leer_ticket(imagen):
         return ""
 
 def extraer_datos(texto):
+    import re
+    import datetime
+
     if not texto:
-        return "Desconocido", str(datetime.date.today()), 0
+        return "Desconocido", str(datetime.date.today()), 0.0
 
     lineas = texto.split("\n")
-    total = 0
+    lineas = [x.strip() for x in lineas if x.strip() != ""]
+
+    total = 0.0
     negocio = "Desconocido"
     fecha = str(datetime.date.today())
 
-    for linea in lineas:
-        if "total" in linea.lower():
-            numeros = re.findall(r"\d+\.\d+|\d+", linea)
-            if numeros:
-                try:
-                    total = float(numeros[-1])
-                except:
-                    total = 0
-
-    if len(lineas) > 0 and lineas[0].strip() != "":
+    # ---------------- NEGOCIO ----------------
+    if len(lineas) > 0:
         negocio = lineas[0]
 
-    return negocio, fecha, total
+    # ---------------- FECHA ----------------
+    fecha_match = re.search(r"(\d{2})/(\d{2})/(\d{4})", texto)
 
+    if fecha_match:
+        dia = fecha_match.group(1)
+        mes = fecha_match.group(2)
+        anio = fecha_match.group(3)
+        fecha = f"{anio}-{mes}-{dia}"
+
+    # ---------------- TOTAL PRIORIDAD 1 ----------------
+    match_valor = re.search(
+        r"VALOR\s*PAG\.?\s*\$?\s*([\d,]+\.\d{2})",
+        texto,
+        re.IGNORECASE
+    )
+
+    if match_valor:
+        total = float(match_valor.group(1).replace(",", ""))
+
+    else:
+
+        # ---------------- TOTAL PRIORIDAD 2 ----------------
+        for linea in lineas:
+            if any(p in linea.lower() for p in [
+                "total", "importe", "monto", "pagado"
+            ]):
+
+                numeros = re.findall(
+                    r"\d{1,3}(?:,\d{3})*\.\d{2}|\d+\.\d{2}",
+                    linea
+                )
+
+                for n in numeros:
+                    try:
+                        valor = float(n.replace(",", ""))
+
+                        # ignorar montos basura
+                        if valor > total and valor > 1:
+                            total = valor
+                    except:
+                        pass
+
+    return negocio, fecha, total
 # ---------------- DATOS ----------------
 usuarios = cargar_usuarios()
 
@@ -411,13 +449,31 @@ if menu == "📸 Tickets":
                 st.error("❌ No se pudo leer ticket")
 
             else:
-                negocio, _, total = extraer_datos(texto)
+                # ---------------- NUEVO ----------------
+                negocio, fecha_ocr, total = extraer_datos(texto)
+
+                # si OCR no encontró negocio
+                if negocio == "":
+                    negocio = "Negocio desconocido"
+
+                # si OCR no encontró total correcto
+                try:
+                    total = float(str(total).replace(",", ""))
+                except:
+                    total = 0.0
+
+                # usar fecha OCR si existe, si no usar manual
+                if fecha_ocr != "":
+                    fecha_final = fecha_ocr
+                else:
+                    fecha_final = fecha_manual.strftime("%Y-%m-%d")
+                # --------------------------------------
 
                 st.success("✅ Ticket leído")
 
                 st.session_state.ticket = {
                     "negocio": negocio,
-                    "fecha": fecha_manual.strftime("%Y-%m-%d"),
+                    "fecha": fecha_final,
                     "total": total
                 }
 
@@ -434,7 +490,8 @@ if menu == "📸 Tickets":
         total = st.number_input(
             "Total",
             min_value=0.0,
-            value=float(t["total"])
+            value=float(t["total"]),
+            step=1.0
         )
 
         tipo = st.radio("Tipo", ["Gasto", "Ingreso"])
