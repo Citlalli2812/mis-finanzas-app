@@ -117,12 +117,123 @@ def extraer_datos(texto):
     if not texto:
         return "Desconocido", str(datetime.date.today()), 0.0
 
-    lineas = texto.split("\n")
-    lineas = [x.strip() for x in lineas if x.strip() != ""]
+    texto_original = texto
+    texto = texto.upper()
+
+    lineas = texto_original.split("\n")
+    lineas_limpias = [x.strip() for x in lineas if x.strip() != ""]
 
     total = 0.0
     negocio = "Desconocido"
     fecha = str(datetime.date.today())
+
+    # NEGOCIO AUTOMÁTICO (México)
+    # ==================================================
+
+    if "OXXO" in texto:
+        negocio = "OXXO"
+
+    elif "WALMART" in texto:
+        negocio = "Walmart"
+
+    elif "SORIANA" in texto:
+        negocio = "Soriana"
+
+    elif "FARMACIAS GUADALAJARA" in texto or "GUADALAJARA" in texto:
+        negocio = "Farmacias Guadalajara"
+
+    elif "COSTCO" in texto:
+        negocio = "Costco"
+
+    elif "AMAZON" in texto:
+        negocio = "Amazon"
+
+    elif "MERCADO PAGO" in texto:
+        negocio = "Mercado Pago"
+
+    elif "SPEI" in texto:
+        negocio = "Transferencia SPEI"
+
+    elif "SAMS" in texto or "SAM'S" in texto or "SAMS CLUB" in texto:
+        negocio = "Sam's Club"
+
+    elif len(lineas_limpias) > 0:
+        negocio = lineas_limpias[0]
+
+    # FECHA
+    # ==================================================
+
+    fecha_match = re.search(r"(\d{2})/(\d{2})/(\d{4})", texto_original)
+
+    if fecha_match:
+        dia = fecha_match.group(1)
+        mes = fecha_match.group(2)
+        anio = fecha_match.group(3)
+        fecha = f"{anio}-{mes}-{dia}"
+
+    else:
+        fecha_match2 = re.search(r"(\d{2})-(\d{2})-(\d{4})", texto_original)
+
+        if fecha_match2:
+            dia = fecha_match2.group(1)
+            mes = fecha_match2.group(2)
+            anio = fecha_match2.group(3)
+            fecha = f"{anio}-{mes}-{dia}"
+
+    # TOTAL INTELIGENTE
+    # ==================================================
+
+    palabras_total = [
+        "TOTAL",
+        "VALOR PAG",
+        "IMPORTE",
+        "PAGADO",
+        "MONTO",
+        "TOTAL A PAGAR",
+        "TOTAL MXN",
+        "PAGO"
+    ]
+
+    for linea in lineas_limpias:
+
+        linea_upper = linea.upper()
+
+        if any(p in linea_upper for p in palabras_total):
+
+            numeros = re.findall(
+                r"\d{1,3}(?:,\d{3})*\.\d{2}|\d+\.\d{2}",
+                linea
+            )
+
+            for n in numeros:
+                try:
+                    valor = float(n.replace(",", ""))
+
+                    if valor > total and valor > 1:
+                        total = valor
+                except:
+                    pass
+
+    # RESPALDO SI NO ENCONTRÓ TOTAL
+    # ==================================================
+
+    if total == 0:
+
+        numeros = re.findall(
+            r"\d{1,3}(?:,\d{3})*\.\d{2}|\d+\.\d{2}",
+            texto_original
+        )
+
+        for n in numeros:
+            try:
+                valor = float(n.replace(",", ""))
+
+                if valor > total and valor > 1:
+                    total = valor
+            except:
+                pass
+
+    return negocio, fecha, total
 
     # ---------------- NEGOCIO ----------------
     if len(lineas) > 0:
